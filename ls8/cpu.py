@@ -139,7 +139,7 @@ class CPU:
         elif op == "OR":
             self.reg[reg_a] |= self.reg[reg_b]
         elif op == "NOT":
-            self.reg[reg_a] ~= self.reg[reg_b]
+            self.reg[reg_a] = ~self.reg[reg_a]
         elif op == "XOR":
             self.reg[reg_a] ^= self.reg[reg_b]
         else:
@@ -326,7 +326,7 @@ class CPU:
         """
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2) & REG_MASK
-        self.alu("NOT", operand_a, operand_b)  
+        self.alu("NOT", operand_a, operand_b)
 
     def handle_OR(self):
         """
