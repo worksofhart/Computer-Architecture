@@ -81,6 +81,7 @@ class CPU:
             CALL: self.handle_CALL,
             DIV: self.handle_DIV,
             HLT: self.handle_HLT,
+            JMP: self.handle_JMP,
             LDI: self.handle_LDI,
             MUL: self.handle_MUL,
             POP: self.handle_POP,
@@ -100,16 +101,6 @@ class CPU:
         """Load a program into memory."""
 
         address = 0
-
-        # program = [
-        #     # From print8.ls8
-        #     0b10000010,  # LDI R0,8
-        #     0b00000000,
-        #     0b00001000,
-        #     0b01000111,  # PRN R0
-        #     0b00000000,
-        #     0b00000001,  # HLT
-        # ]
 
         for instruction in program:
             self.ram[address] = instruction
@@ -166,8 +157,8 @@ class CPU:
         ADD registerA registerB
         Add the value in two registers and store the result in registerA.
         """
-        operand_a = self.ram[self.PC+1] & REG_MASK
-        operand_b = self.ram[self.PC+2] & REG_MASK
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        operand_b = self.ram_read(self.PC+2) & REG_MASK
         self.alu("ADD", operand_a, operand_b)
 
     def handle_CALL(self):
@@ -175,9 +166,10 @@ class CPU:
         CALL register
         Calls a subroutine at the address stored in the register.
         """
-        operand_a = self.PC + 2  # Address to return to
-        operand_b = self.reg[self.ram[self.PC+1]
-                             & REG_MASK]  # Address to jump to in specified register
+        # Address to return to
+        operand_a = self.PC + 2
+        # Address to jump to in specified register
+        operand_b = self.reg[self.ram_read(self.PC + 1) & REG_MASK]
 
         # Decrement Stack Pointer
         self.reg[SP] -= 1
@@ -192,8 +184,8 @@ class CPU:
         SUB registerA registerB
         Divide the value in the first register by the value in the second, storing the result in registerA.
         """
-        operand_a = self.ram[self.PC+1] & REG_MASK
-        operand_b = self.ram[self.PC+2] & REG_MASK
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        operand_b = self.ram_read(self.PC+2) & REG_MASK
         self.alu("DIV", operand_a, operand_b)
 
     def handle_HLT(self):
@@ -203,13 +195,21 @@ class CPU:
         """
         self.halted = True
 
+    def handle_JMP(self):
+        """
+        JMP register
+        Jump to the address stored in the given register.
+        """
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        self.PC = self.reg[operand_a]
+
     def handle_LDI(self):
         """
         LDI register immediate
         Set the value of a register to an integer.
         """
-        operand_a = self.ram[self.PC+1] & REG_MASK
-        operand_b = self.ram[self.PC+2]
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        operand_b = self.ram_read(self.PC+2)
         self.reg[operand_a] = operand_b
 
     def handle_MUL(self):
@@ -217,8 +217,8 @@ class CPU:
         MUL registerA registerB
         Multiply the values in two registers together and store the result in registerA.
         """
-        operand_a = self.ram[self.PC+1] & REG_MASK
-        operand_b = self.ram[self.PC+2] & REG_MASK
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        operand_b = self.ram_read(self.PC+2) & REG_MASK
         self.alu("MUL", operand_a, operand_b)
 
     def handle_POP(self):
@@ -227,8 +227,8 @@ class CPU:
         Pop the value at the top of the stack into the given register.
         """
 
-        operand_a = self.ram[self.PC+1] & REG_MASK
-        self.reg[operand_a] = self.ram[self.reg[SP]]
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        self.reg[operand_a] = self.ram_read(self.reg[SP])
         self.reg[SP] += 1
         self.reg[SP] &= BYTE_MASK
 
@@ -237,7 +237,7 @@ class CPU:
         PRN register (pseudo-instruction)
         Print numeric value stored in the given register.
         """
-        operand_a = self.ram[self.PC+1] & REG_MASK
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
         print(self.reg[operand_a])
 
     def handle_PUSH(self):
@@ -245,7 +245,7 @@ class CPU:
         PUSH register
         Push the value in the given register on the stack.
         """
-        operand_a = self.ram[self.PC+1] & REG_MASK
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
         self.reg[SP] -= 1
         self.reg[SP] &= BYTE_MASK
         self.ram[self.reg[SP]] = self.reg[operand_a]
@@ -256,7 +256,7 @@ class CPU:
         Return from subroutine.
         """
         # Pop return address from stack and set PC
-        self.PC = self.ram[self.reg[SP]]
+        self.PC = self.ram_read(self.reg[SP])
         # Increment Stack Pointer
         self.reg[SP] -= 1
         self.reg[SP] &= BYTE_MASK
@@ -266,8 +266,8 @@ class CPU:
         SUB registerA registerB
         Subtract the value in the second register from the first, storing the result in registerA.
         """
-        operand_a = self.ram[self.PC+1] & REG_MASK
-        operand_b = self.ram[self.PC+2] & REG_MASK
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        operand_b = self.ram_read(self.PC+2) & REG_MASK
         self.alu("SUB", operand_a, operand_b)
 
     # Execute the currently loaded program
@@ -278,15 +278,18 @@ class CPU:
         while not self.halted:
             # print("Before:")
             # self.trace()
+
             # Load the instruction register
             self.IR = self.ram_read(self.PC)
+
             # If a known instruction is found, execute it
             if self.IR in self.jumptable:
                 self.jumptable[self.IR]()
+
                 # If the instruction doesn't set PC directly, advance to next instruction
                 if not (self.IR & 0b00010000):
-                    # print(f"{self.PC}, adding {inc}")
                     self.PC += (self.IR >> 6) + 1
+
                 # print("After:")
                 # self.trace()
             else:
@@ -294,5 +297,3 @@ class CPU:
                 raise Exception(
                     f"Unimplemented instruction 0x{self.IR:02x} at 0x{self.PC:02x}")
                 self.halted = True
-
-        print("Execution complete")
