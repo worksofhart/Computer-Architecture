@@ -180,8 +180,3 @@ class CPU:
                 self.halted = True
 
         print("Execution complete")
-
-
-ls8 = CPU()
-ls8.load()
-ls8.run()
