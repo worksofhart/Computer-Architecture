@@ -97,6 +97,7 @@ class CPU:
             RET: self.handle_RET,
             SHL: self.handle_SHL,
             SHR: self.handle_SHR,
+            ST: self.handle_ST,
             SUB: self.handle_SUB,
             XOR: self.handle_XOR
         }
@@ -412,6 +413,15 @@ class CPU:
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2) & REG_MASK
         self.ALU("AND", operand_a, operand_b)
+
+    def handle_ST(self):
+        """
+        ST registerA registerB
+        Store value in registerB in the address stored in registerA.
+        """
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        operand_b = self.ram_read(self.PC+2) & REG_MASK
+        self.ram_write(self.reg[operand_a], self.reg[operand_b])
 
     def handle_SUB(self):
         """
