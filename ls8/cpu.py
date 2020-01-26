@@ -217,7 +217,9 @@ class CPU:
             # If a known instruction is found, execute it
             if self.IR in self.jumptable:
                 self.jumptable[self.IR]()
-                self.PC += (self.IR >> 6) + 1
+                # If the instruction doesn't set PC directly, advance to next instruction
+                if not (self.IR & 0b00010000):
+                    self.PC += (self.IR >> 6) + 1
             else:
                 # Quit on unknown instruction
                 raise Exception(
