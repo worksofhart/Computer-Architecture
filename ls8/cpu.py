@@ -80,11 +80,18 @@ class CPU:
             ADD: self.handle_ADD,
             AND: self.handle_AND,
             CALL: self.handle_CALL,
+            CMP: self.handle_CMP,
             DEC: self.handle_DEC,
             DIV: self.handle_DIV,
             HLT: self.handle_HLT,
             INC: self.handle_INC,
+            JEQ: self.handle_JEQ,
+            JGE: self.handle_JGE,
+            JGT: self.handle_JGT,
+            JLE: self.handle_JLE,
+            JLT: self.handle_JLT,
             JMP: self.handle_JMP,
+            JNE: self.handle_JNE,
             LDI: self.handle_LDI,
             MUL: self.handle_MUL,
             NOP: self.handle_NOP,
@@ -242,6 +249,22 @@ class CPU:
         # Set PC to address in specified register
         self.PC = operand_b
 
+    def handle_CMP(self):
+        """
+        CMP registerA registerB
+        Compare the values in two registers and set flags accordingly.
+        """
+        operand_a = self.reg[self.ram_read(self.PC+1) & REG_MASK]
+        operand_b = self.reg[self.ram_read(self.PC+2) & REG_MASK]
+
+        self.FL = 0b000
+        if operand_a == operand_b:
+            self.FL |= 0b001
+        elif operand_a < operand_b:
+            self.FL |= 0b100
+        elif operand_a > operand_b:
+            self.FL |= 0b010
+
     def handle_DEC(self):
         """
         DEC register
@@ -276,13 +299,80 @@ class CPU:
         self.reg[operand_a] += 1
         self.reg[operand_a] &= BYTE_MASK
 
-    def handle_JMP(self):
+    def handle_JEQ(self):
+        """
+        JEQ register
+        If equal flag is set (true), jump to the address stored in the given register.
+        """
+        if self.FL & 0b001:
+            operand_a = self.ram_read(self.PC+1) & REG_MASK
+            self.handle_JMP(self.reg[operand_a])
+        else:
+            self.pc += 2
+
+    def handle_JGE(self):
+        """
+        JGE register
+        If greater-than flag or equal flag is set (true), jump to the address stored in the given register.
+        """
+        if self.FL & 0b011:
+            operand_a = self.ram_read(self.PC+1) & REG_MASK
+            self.handle_JMP(self.reg[operand_a])
+        else:
+            self.pc += 2
+
+    def handle_JGT(self):
+        """
+        JGT register
+        If greater-than flag is set (true), jump to the address stored in the given register.
+        """
+        if self.FL & 0b010:
+            operand_a = self.ram_read(self.PC+1) & REG_MASK
+            self.handle_JMP(self.reg[operand_a])
+        else:
+            self.pc += 2
+
+    def handle_JLE(self):
+        """
+        JLE register
+        If less-than flag or equal flag is set (true), jump to the address stored in the given register.
+        """
+        if self.FL & 0b101:
+            operand_a = self.ram_read(self.PC+1) & REG_MASK
+            self.handle_JMP(self.reg[operand_a])
+        else:
+            self.pc += 2
+
+    def handle_JLT(self):
+        """
+        JLT register
+        If less-than flag is set (true), jump to the address stored in the given register.
+        """
+        if self.FL & 0b100:
+            operand_a = self.ram_read(self.PC+1) & REG_MASK
+            self.handle_JMP(self.reg[operand_a])
+        else:
+            self.pc += 2
+
+    def handle_JMP(self, addr=None):
         """
         JMP register
         Jump to the address stored in the given register.
         """
-        operand_a = self.ram_read(self.PC+1) & REG_MASK
-        self.PC = self.reg[operand_a]
+        if not addr:
+            operand_a = self.ram_read(self.PC+1) & REG_MASK
+        self.PC = self.reg[operand_a] if not addr else addr
+
+    def handle_JNE(self):
+        """
+        JNE register
+        If E flag is clear (false, 0), jump to the address stored in the given register.
+        """
+        if not self.FL & 0b001:
+            operand_a = self.ram_read(self.PC+1) & REG_MASK
+            self.handle_JMP(self.reg[operand_a])
+        else:
+            self.pc += 2
 
     def handle_LD(self):
         """
