@@ -126,6 +126,12 @@ class CPU:
             else:
                 self.halted = True
                 raise Exception("Division by zero error")
+        elif op == "MOD":
+            if self.reg[reg_b] != 0:
+                self.reg[reg_a] %= self.reg[reg_b]
+            else:
+                self.halted = True
+                raise Exception("Division by zero error")
         elif op == "AND":
             self.reg[reg_a] &= self.reg[reg_b]
         elif op == "OR":
@@ -266,6 +272,15 @@ class CPU:
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         self.PC = self.reg[operand_a]
 
+    def handle_LD(self):
+        """
+        LD registerA registerB
+        Loads registerA with the value at the memory address stored in registerB.
+        """
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        operand_b = self.ram_read(self.PC+2) & REG_MASK
+        self.reg[operand_a] = self.ram_read(self.reg[operand_b])
+
     def handle_LDI(self):
         """
         LDI register immediate
@@ -274,6 +289,15 @@ class CPU:
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2)
         self.reg[operand_a] = operand_b
+
+    def handle_MOD(self):
+        """
+        MOD registerA registerB
+        Divide the value in the first register by the value in the second, storing the remainder of the result in registerA.
+        """
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        operand_b = self.ram_read(self.PC+2) & REG_MASK
+        self.alu("MOD", operand_a, operand_b)
 
     def handle_MUL(self):
         """
