@@ -80,7 +80,9 @@ class CPU:
             HLT: self.handle_HLT,
             LDI: self.handle_LDI,
             MUL: self.handle_MUL,
-            PRN: self.handle_PRN
+            POP: self.handle_POP,
+            PRN: self.handle_PRN,
+            PUSH: self.handle_PUSH
         }
 
     def ram_read(self, MAR):
@@ -175,6 +177,16 @@ class CPU:
         operand_b = self.ram[self.PC+2] & REG_MASK
         self.alu("MUL", operand_a, operand_b)
 
+    def handle_POP(self):
+        """
+        POP register
+        Push the value in the given register on the stack.
+        """
+        operand_a = self.ram[self.PC+1] & REG_MASK
+        self.reg[operand_a] = self.ram[self.reg[SP]]
+        self.reg[SP] += 1
+        self.reg[SP] &= BYTE_MASK
+
     def handle_PRN(self):
         """
         PRN register (pseudo-instruction)
@@ -182,6 +194,16 @@ class CPU:
         """
         operand_a = self.ram[self.PC+1] & REG_MASK
         print(self.reg[operand_a])
+
+    def handle_PUSH(self):
+        """
+        PUSH register
+        Push the value in the given register on the stack.
+        """
+        operand_a = self.ram[self.PC+1] & REG_MASK
+        self.reg[SP] -= 1
+        self.reg[SP] &= BYTE_MASK
+        self.ram[self.reg[SP]] = self.reg[operand_a]
 
     # Execute the currently loaded program
     def run(self):
