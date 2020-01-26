@@ -2,9 +2,50 @@
 
 import sys
 
+# Register name constants
 IM = 5  # Interrupt Mask, reg R5
 IS = 6  # Interrupt Status, reg R6
 SP = 7  # Stack Pointer, reg R7
+
+# Instruction lookup
+ADD = 0b10100000
+AND = 0b10101000
+CALL = 0b01010000
+CMP = 0b10100111
+DEC = 0b01100110
+DIV = 0b10100011
+HLT = 0b00000001
+INC = 0b01100101
+INT = 0b01010010
+IRET = 0b00010011
+JEQ = 0b01010101
+JGE = 0b01011010
+JGT = 0b01010111
+JLE = 0b01011001
+JLT = 0b01011000
+JMP = 0b01010100
+JNE = 0b01010110
+LD = 0b10000011
+LDI = 0b10000010
+MOD = 0b10100100
+MUL = 0b10100010
+NOP = 0b00000000
+NOT = 0b01101001
+OR = 0b10101010
+POP = 0b01000110
+PRA = 0b01001000
+PRN = 0b01000111
+PUSH = 0b01000101
+RET = 0b00010001
+SHL = 0b10101100
+SHR = 0b10101101
+ST = 0b10000100
+SUB = 0b10100001
+XOR = 0b10101011
+
+# Register mask
+# Isolate register number in instructions which operate on registers
+REG_MASK = 0b00000111
 
 
 class CPU:
@@ -13,13 +54,29 @@ class CPU:
     def __init__(self):
         """Construct a new CPU."""
 
-        self.ram = [0] * 256        # 256 bytes of RAM
-        self.reg = [0] * 8          # Registers R0 - R7
+        # 256 bytes of RAM
+        self.ram = [0] * 256
+        # Registers R0 - R7
+        self.reg = [0] * 8
+        # Start of stack
+        self.reg[SP] = 0xF3
 
         # Internal registers
-        self.PC = 0x00   # Program Counter, address of the currently executing instruction
-        self.IR = 0x00   # Instruction Register, contains a copy of the currently executing instruction
-        self.FL = 0x00   # Flags
+        # Program Counter, address of the currently executing instruction
+        self.PC = 0x00
+        # Instruction Register, contains a copy of the currently executing instruction
+        self.IR = 0x00
+        # Flags, 0b00000LGE (less-than, greater-than, equal)
+        self.FL = 0b00000000
+        # Whether halted or not
+        self.halted = False
+
+        # Instruction jump table
+        self.jumptable = set({
+            HLT: hlt,
+            LDI: ldi,
+            PRN: prn
+        })
 
     def ram_read(self, MAR):
         return self.ram[MAR]
@@ -77,6 +134,18 @@ class CPU:
 
         print()
 
+    # Instructions
+    def hlt(self):
+        self.halted = True
+
+    def ldi(self):
+        operand_a = self.ram[self.PC+1] & REG_MASK
+        operand_b = self.ram[self.PC+2]
+        self.reg[operand_a] = operand_b
+
+    def prn(self):
+        operand_a = self.ram[self.PC+1] & REG_MASK
+        print(self.reg[operand_a])
+
     def run(self):
         """Run the CPU."""
-        pass
