@@ -308,7 +308,7 @@ class CPU:
             operand_a = self.ram_read(self.PC+1) & REG_MASK
             self.handle_JMP(self.reg[operand_a])
         else:
-            self.pc += 2
+            self.PC += 2
 
     def handle_JGE(self):
         """
@@ -319,7 +319,7 @@ class CPU:
             operand_a = self.ram_read(self.PC+1) & REG_MASK
             self.handle_JMP(self.reg[operand_a])
         else:
-            self.pc += 2
+            self.PC += 2
 
     def handle_JGT(self):
         """
@@ -330,7 +330,7 @@ class CPU:
             operand_a = self.ram_read(self.PC+1) & REG_MASK
             self.handle_JMP(self.reg[operand_a])
         else:
-            self.pc += 2
+            self.PC += 2
 
     def handle_JLE(self):
         """
@@ -341,7 +341,7 @@ class CPU:
             operand_a = self.ram_read(self.PC+1) & REG_MASK
             self.handle_JMP(self.reg[operand_a])
         else:
-            self.pc += 2
+            self.PC += 2
 
     def handle_JLT(self):
         """
@@ -352,7 +352,7 @@ class CPU:
             operand_a = self.ram_read(self.PC+1) & REG_MASK
             self.handle_JMP(self.reg[operand_a])
         else:
-            self.pc += 2
+            self.PC += 2
 
     def handle_JMP(self, addr=None):
         """
@@ -372,7 +372,7 @@ class CPU:
             operand_a = self.ram_read(self.PC+1) & REG_MASK
             self.handle_JMP(self.reg[operand_a])
         else:
-            self.pc += 2
+            self.PC += 2
 
     def handle_LD(self):
         """
