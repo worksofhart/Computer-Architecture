@@ -91,6 +91,7 @@ class CPU:
             NOT: self.handle_NOT,
             OR: self.handle_OR,
             POP: self.handle_POP,
+            PRA: self.handle_PRA,
             PRN: self.handle_PRN,
             PUSH: self.handle_PUSH,
             RET: self.handle_RET,
@@ -113,7 +114,7 @@ class CPU:
             self.ram[address] = instruction
             address += 1
 
-    def alu(self, op, reg_a, reg_b):
+    def alu(self, op, reg_a, reg_b=0):
         """ALU operations."""
 
         if op == "ADD":
@@ -325,8 +326,7 @@ class CPU:
         Perform a bitwise-NOT on the value in a register.
         """
         operand_a = self.ram_read(self.PC+1) & REG_MASK
-        operand_b = self.ram_read(self.PC+2) & REG_MASK
-        self.alu("NOT", operand_a, operand_b)
+        self.alu("NOT", operand_a)
 
     def handle_OR(self):
         """
@@ -349,6 +349,14 @@ class CPU:
         self.reg[SP] += 1
         self.reg[SP] &= BYTE_MASK
         return popped
+
+    def handle_PRA(self):
+        """
+        PRA register pseudo-instruction
+        Print alpha character value stored in the given register.
+        """
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        print(chr(self.reg[operand_a], end=''))
 
     def handle_PRN(self):
         """
