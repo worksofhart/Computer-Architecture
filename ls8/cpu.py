@@ -87,6 +87,8 @@ class CPU:
             JMP: self.handle_JMP,
             LDI: self.handle_LDI,
             MUL: self.handle_MUL,
+            NOP: self.handle_NOP,
+            NOT: self.handle_NOT,
             OR: self.handle_OR,
             POP: self.handle_POP,
             PRN: self.handle_PRN,
@@ -136,6 +138,8 @@ class CPU:
             self.reg[reg_a] &= self.reg[reg_b]
         elif op == "OR":
             self.reg[reg_a] |= self.reg[reg_b]
+        elif op == "NOT":
+            self.reg[reg_a] ~= self.reg[reg_b]
         elif op == "XOR":
             self.reg[reg_a] ^= self.reg[reg_b]
         else:
@@ -307,6 +311,22 @@ class CPU:
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2) & REG_MASK
         self.alu("MUL", operand_a, operand_b)
+
+    def handle_NOP(self):
+        """
+        NOP
+        No operation. Do nothing for this instruction.
+        """
+        pass
+
+    def handle_NOT(self):
+        """
+        NOT register
+        Perform a bitwise-NOT on the value in a register.
+        """
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        operand_b = self.ram_read(self.PC+2) & REG_MASK
+        self.alu("NOT", operand_a, operand_b)  
 
     def handle_OR(self):
         """
