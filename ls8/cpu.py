@@ -1,6 +1,22 @@
 """CPU functionality."""
 
 import sys
+import termios
+import tty
+from kbhit import KBHit
+
+
+def getch():
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(sys.stdin.fileno())
+        ch = sys.stdin.read(1)
+
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    return ch
+
 
 # Register name constants
 IM = 5  # Interrupt Mask, reg R5
@@ -92,6 +108,7 @@ class CPU:
             JLT: self.handle_JLT,
             JMP: self.handle_JMP,
             JNE: self.handle_JNE,
+            LD: self.handle_LD,
             LDI: self.handle_LDI,
             MUL: self.handle_MUL,
             NOP: self.handle_NOP,
@@ -192,8 +209,12 @@ class CPU:
     def run(self):
         """Run the CPU."""
 
+        kb = KBHit()
         # Execute instructions until a HLT instruction or invalid state reached
         while not self.halted:
+            if kb.kbhit():
+                key = kb.getch()
+                self.ram_write(0xF4, key)
             # print("Before:")
             # self.trace()
 
@@ -453,7 +474,7 @@ class CPU:
         Print alpha character value stored in the given register.
         """
         operand_a = self.ram_read(self.PC+1) & REG_MASK
-        print(chr(self.reg[operand_a], end=''))
+        print(chr(self.reg[operand_a]), end='')
 
     def handle_PRN(self):
         """
