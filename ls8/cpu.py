@@ -80,8 +80,10 @@ class CPU:
             ADD: self.handle_ADD,
             AND: self.handle_AND,
             CALL: self.handle_CALL,
+            DEC: self.handle_DEC,
             DIV: self.handle_DIV,
             HLT: self.handle_HLT,
+            INC: self.handle_INC,
             JMP: self.handle_JMP,
             LDI: self.handle_LDI,
             MUL: self.handle_MUL,
@@ -222,6 +224,15 @@ class CPU:
         # Set PC to address in specified register
         self.PC = operand_b
 
+    def handle_DEC(self):
+        """
+        DEC register
+        Decrement (subtract 1 from) the value in the given register.
+        """
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        self.reg[operand_a] -= 1
+        self.reg[operand_a] &= BYTE_MASK
+
     def handle_DIV(self):
         """
         SUB registerA registerB
@@ -237,6 +248,15 @@ class CPU:
         Halt the CPU.
         """
         self.halted = True
+
+    def handle_INC(self):
+        """
+        INC register
+        Increment (add 1 to) the value in the given register.
+        """
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        self.reg[operand_a] += 1
+        self.reg[operand_a] &= BYTE_MASK
 
     def handle_JMP(self):
         """
@@ -272,7 +292,6 @@ class CPU:
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2) & REG_MASK
         self.ALU("OR", operand_a, operand_b)
-
 
     def handle_POP(self):
         """
