@@ -17,15 +17,15 @@ class CPU:
         self.reg = [0] * 8          # Registers R0 - R7
 
         # Internal registers
-        # Program Counter, address of the currently executing instruction
-        self.PC = 0x00
-        # Instruction Register, contains a copy of the currently executing instruction
-        self.IR = 0x00
-        # Memory Address Register, holds the memory address we're reading or writing
-        self.MAR = 0x00
-        # Memory Data Register, holds the value to write or the value just read
-        self.MDR = 0x00
-        self.FL                     # Flags
+        self.PC = 0x00   # Program Counter, address of the currently executing instruction
+        self.IR = 0x00   # Instruction Register, contains a copy of the currently executing instruction
+        self.FL = 0x00   # Flags
+
+    def ram_read(self, MAR):
+        return self.ram[MAR]
+
+    def ram_write(self, MAR, MDR):
+        self.ram[MAR] = MDR
 
     def load(self):
         """Load a program into memory."""
