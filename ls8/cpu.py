@@ -95,6 +95,8 @@ class CPU:
             PRN: self.handle_PRN,
             PUSH: self.handle_PUSH,
             RET: self.handle_RET,
+            SHL: self.handle_SHL,
+            SHR: self.handle_SHR,
             SUB: self.handle_SUB,
             XOR: self.handle_XOR
         }
@@ -143,6 +145,10 @@ class CPU:
             self.reg[reg_a] = ~self.reg[reg_a]
         elif op == "XOR":
             self.reg[reg_a] ^= self.reg[reg_b]
+        elif op == "SHL":
+            self.reg[reg_a] <<= self.reg[reg_b]
+        elif op == "SHR":
+            self.reg[reg_a] >>= self.reg[reg_b]
         else:
             self.halted = True
             raise Exception("Unsupported ALU operation")
@@ -388,6 +394,24 @@ class CPU:
         # Increment Stack Pointer
         self.reg[SP] -= 1
         self.reg[SP] &= BYTE_MASK
+
+    def handle_SHL(self):
+        """
+        SHL registerA registerB
+        Shift the value in registerA left by the number of bits specified in registerB, filling the low bits with 0.
+        """
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        operand_b = self.ram_read(self.PC+2) & REG_MASK
+        self.ALU("AND", operand_a, operand_b)
+
+    def handle_SHR(self):
+        """
+        SHR registerA registerB
+        Shift the value in registerA right by the number of bits specified in registerB, filling the high bits with 0.
+        """
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        operand_b = self.ram_read(self.PC+2) & REG_MASK
+        self.ALU("AND", operand_a, operand_b)
 
     def handle_SUB(self):
         """
