@@ -215,6 +215,7 @@ class CPU:
             if kb.kbhit():
                 key = kb.getch()
                 self.ram_write(0xF4, key)
+                print(key, end="", flush=True)
             # print("Before:")
             # self.trace()
 
