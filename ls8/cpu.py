@@ -14,7 +14,7 @@ CALL = 0b01010000
 CMP = 0b10100111
 DEC = 0b01100110
 DIV = 0b10100011
-HLT = 0b00000001
+HLT = 0b00000001  # HLT
 INC = 0b01100101
 INT = 0b01010010
 IRET = 0b00010011
@@ -26,7 +26,7 @@ JLT = 0b01011000
 JMP = 0b01010100
 JNE = 0b01010110
 LD = 0b10000011
-LDI = 0b10000010
+LDI = 0b10000010  # LDI register immediate
 MOD = 0b10100100
 MUL = 0b10100010
 NOP = 0b00000000
@@ -46,6 +46,7 @@ XOR = 0b10101011
 # Register mask
 # Isolate register number in instructions which operate on registers
 REG_MASK = 0b00000111
+BYTE_MASK = 0b11111111
 
 
 class CPU:
@@ -72,11 +73,11 @@ class CPU:
         self.halted = False
 
         # Instruction jump table
-        self.jumptable = set({
-            HLT: hlt,
-            LDI: ldi,
-            PRN: prn
-        })
+        self.jumptable = {
+            HLT: self.HLT,
+            LDI: self.LDI,
+            PRN: self.PRN
+        }
 
     def ram_read(self, MAR):
         return self.ram[MAR]
@@ -121,12 +122,12 @@ class CPU:
         """
 
         print(f"TRACE: %02X | %02X %02X %02X |" % (
-            self.pc,
+            self.PC,
             # self.fl,
             # self.ie,
-            self.ram_read(self.pc),
-            self.ram_read(self.pc + 1),
-            self.ram_read(self.pc + 2)
+            self.ram_read(self.PC),
+            self.ram_read(self.PC + 1),
+            self.ram_read(self.PC + 2)
         ), end='')
 
         for i in range(8):
@@ -135,17 +136,52 @@ class CPU:
         print()
 
     # Instructions
-    def hlt(self):
+    def HLT(self):
+        """
+        HLT
+        Halt the CPU.
+        """
         self.halted = True
 
-    def ldi(self):
+    def LDI(self):
+        """
+        LDI register immediate
+        Set the value of a register to an integer.
+        """
         operand_a = self.ram[self.PC+1] & REG_MASK
         operand_b = self.ram[self.PC+2]
         self.reg[operand_a] = operand_b
 
-    def prn(self):
+    def PRN(self):
+        """
+        PRN register (pseudo-instruction)
+        Print numeric value stored in the given register.
+        """
         operand_a = self.ram[self.PC+1] & REG_MASK
         print(self.reg[operand_a])
 
+    # Execute the currently loaded program
     def run(self):
         """Run the CPU."""
+
+        # Execute instructions until a HLT instruction or invalid state reached
+        while not self.halted:
+            # self.trace()
+            # Load the instruction register
+            self.IR = self.ram_read(self.PC)
+            # If a known instruction is found, execute it
+            if self.IR in self.jumptable:
+                self.jumptable[self.IR]()
+                self.PC += (self.IR >> 6) + 1
+            else:
+                # Quit on unknown instruction
+                print(
+                    f"Unimplemented instruction {self.IR:02x} at {self.PC:02x}")
+                self.halted = True
+
+        print("Execution complete")
+
+
+ls8 = CPU()
+ls8.load()
+ls8.run()
