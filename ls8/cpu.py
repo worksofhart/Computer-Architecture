@@ -78,17 +78,20 @@ class CPU:
         # Instruction jump table
         self.jumptable = {
             ADD: self.handle_ADD,
+            AND: self.handle_AND,
             CALL: self.handle_CALL,
             DIV: self.handle_DIV,
             HLT: self.handle_HLT,
             JMP: self.handle_JMP,
             LDI: self.handle_LDI,
             MUL: self.handle_MUL,
+            OR: self.handle_OR,
             POP: self.handle_POP,
             PRN: self.handle_PRN,
             PUSH: self.handle_PUSH,
             RET: self.handle_RET,
-            SUB: self.handle_SUB
+            SUB: self.handle_SUB,
+            XOR: self.handle_XOR
         }
 
     def ram_read(self, MAR):
@@ -121,6 +124,12 @@ class CPU:
             else:
                 self.halted = True
                 raise Exception("Division by zero error")
+        elif op == "AND":
+            self.reg[reg_a] &= self.reg[reg_b]
+        elif op == "OR":
+            self.reg[reg_a] |= self.reg[reg_b]
+        elif op == "XOR":
+            self.reg[reg_a] ^= self.reg[reg_b]
         else:
             self.halted = True
             raise Exception("Unsupported ALU operation")
@@ -151,6 +160,35 @@ class CPU:
 
         print()
 
+    # Execute the currently loaded program
+
+    def run(self):
+        """Run the CPU."""
+
+        # Execute instructions until a HLT instruction or invalid state reached
+        while not self.halted:
+            # print("Before:")
+            # self.trace()
+
+            # Load the instruction register
+            self.IR = self.ram_read(self.PC)
+
+            # If a known instruction is found, execute it
+            if self.IR in self.jumptable:
+                self.jumptable[self.IR]()
+
+                # If the instruction doesn't set PC directly, advance to next instruction
+                if not (self.IR & 0b00010000):
+                    self.PC += (self.IR >> 6) + 1
+
+                # print("After:")
+                # self.trace()
+            else:
+                # Quit on unknown instruction
+                raise Exception(
+                    f"Unimplemented instruction 0x{self.IR:02x} at 0x{self.PC:02x}")
+                self.halted = True
+
     # Instructions
     def handle_ADD(self):
         """
@@ -160,6 +198,15 @@ class CPU:
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2) & REG_MASK
         self.alu("ADD", operand_a, operand_b)
+
+    def handle_AND(self):
+        """
+        AND registerA registerB
+        Bitwise-AND the values in registerA and registerB, then store the result in registerA.
+        """
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        operand_b = self.ram_read(self.PC+2) & REG_MASK
+        self.ALU("AND", operand_a, operand_b)
 
     def handle_CALL(self):
         """
@@ -171,11 +218,7 @@ class CPU:
         # Address to jump to in specified register
         operand_b = self.reg[self.ram_read(self.PC + 1) & REG_MASK]
 
-        # Decrement Stack Pointer
-        self.reg[SP] -= 1
-        self.reg[SP] &= BYTE_MASK
-        # Push return address onto stack
-        self.ram[self.reg[SP]] = operand_a
+        self.handle_PUSH(operand_a)
         # Set PC to address in specified register
         self.PC = operand_b
 
@@ -221,6 +264,16 @@ class CPU:
         operand_b = self.ram_read(self.PC+2) & REG_MASK
         self.alu("MUL", operand_a, operand_b)
 
+    def handle_OR(self):
+        """
+        OR registerA registerB
+        Bitwise-OR the values in registerA and registerB, then store the result in registerA.
+        """
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        operand_b = self.ram_read(self.PC+2) & REG_MASK
+        self.ALU("OR", operand_a, operand_b)
+
+
     def handle_POP(self):
         """
         POP register
@@ -228,9 +281,11 @@ class CPU:
         """
 
         operand_a = self.ram_read(self.PC+1) & REG_MASK
-        self.reg[operand_a] = self.ram_read(self.reg[SP])
+        popped = self.ram_read(self.reg[SP])
+        self.reg[operand_a] = popped
         self.reg[SP] += 1
         self.reg[SP] &= BYTE_MASK
+        return popped
 
     def handle_PRN(self):
         """
@@ -240,15 +295,17 @@ class CPU:
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         print(self.reg[operand_a])
 
-    def handle_PUSH(self):
+    def handle_PUSH(self, val=None):
         """
         PUSH register
         Push the value in the given register on the stack.
+        If val given in function call, push val instead
         """
-        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        if not val:
+            operand_a = self.ram_read(self.PC+1) & REG_MASK
         self.reg[SP] -= 1
         self.reg[SP] &= BYTE_MASK
-        self.ram[self.reg[SP]] = self.reg[operand_a]
+        self.ram_write(self.reg[SP], self.reg[operand_a] if not val else val)
 
     def handle_RET(self):
         """
@@ -270,30 +327,11 @@ class CPU:
         operand_b = self.ram_read(self.PC+2) & REG_MASK
         self.alu("SUB", operand_a, operand_b)
 
-    # Execute the currently loaded program
-    def run(self):
-        """Run the CPU."""
-
-        # Execute instructions until a HLT instruction or invalid state reached
-        while not self.halted:
-            # print("Before:")
-            # self.trace()
-
-            # Load the instruction register
-            self.IR = self.ram_read(self.PC)
-
-            # If a known instruction is found, execute it
-            if self.IR in self.jumptable:
-                self.jumptable[self.IR]()
-
-                # If the instruction doesn't set PC directly, advance to next instruction
-                if not (self.IR & 0b00010000):
-                    self.PC += (self.IR >> 6) + 1
-
-                # print("After:")
-                # self.trace()
-            else:
-                # Quit on unknown instruction
-                raise Exception(
-                    f"Unimplemented instruction 0x{self.IR:02x} at 0x{self.PC:02x}")
-                self.halted = True
+    def handle_XOR(self):
+        """
+        XOR registerA registerB
+        Bitwise-XOR the values in registerA and registerB, then store the result in registerA.
+        """
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        operand_b = self.ram_read(self.PC+2) & REG_MASK
+        self.ALU("XOR", operand_a, operand_b)
