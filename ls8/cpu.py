@@ -46,6 +46,9 @@ XOR = 0b10101011
 # Register mask
 # Isolate register number in instructions which operate on registers
 REG_MASK = 0b00000111
+
+# Byte mask
+# Used to limit results to 8 bits
 BYTE_MASK = 0b11111111
 
 
@@ -74,9 +77,10 @@ class CPU:
 
         # Instruction jump table
         self.jumptable = {
-            HLT: self.HLT,
-            LDI: self.LDI,
-            PRN: self.PRN
+            HLT: self.handle_HLT,
+            LDI: self.handle_LDI,
+            MUL: self.handle_MUL,
+            PRN: self.handle_PRN
         }
 
     def ram_read(self, MAR):
@@ -85,22 +89,20 @@ class CPU:
     def ram_write(self, MAR, MDR):
         self.ram[MAR] = MDR
 
-    def load(self):
+    def load(self, program):
         """Load a program into memory."""
 
         address = 0
 
-        # For now, we've just hardcoded a program:
-
-        program = [
-            # From print8.ls8
-            0b10000010,  # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111,  # PRN R0
-            0b00000000,
-            0b00000001,  # HLT
-        ]
+        # program = [
+        #     # From print8.ls8
+        #     0b10000010,  # LDI R0,8
+        #     0b00000000,
+        #     0b00001000,
+        #     0b01000111,  # PRN R0
+        #     0b00000000,
+        #     0b00000001,  # HLT
+        # ]
 
         for instruction in program:
             self.ram[address] = instruction
@@ -111,9 +113,21 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        # elif op == "SUB": etc
+        elif op == "SUB":
+            self.reg[reg_a] -= self.reg[reg_b]
+        elif op == "MUL":
+            self.reg[reg_a] *= self.reg[reg_b]
+        elif op == "DIV":
+            if self.reg[reg_b] != 0:
+                self.reg[reg_a] //= self.reg[reg_b]
+            else:
+                self.halted = True
+                raise Exception("Division by zero error")
         else:
+            self.halted = True
             raise Exception("Unsupported ALU operation")
+
+        self.reg[reg_a] &= BYTE_MASK
 
     def trace(self):
         """
@@ -136,14 +150,14 @@ class CPU:
         print()
 
     # Instructions
-    def HLT(self):
+    def handle_HLT(self):
         """
         HLT
         Halt the CPU.
         """
         self.halted = True
 
-    def LDI(self):
+    def handle_LDI(self):
         """
         LDI register immediate
         Set the value of a register to an integer.
@@ -152,7 +166,16 @@ class CPU:
         operand_b = self.ram[self.PC+2]
         self.reg[operand_a] = operand_b
 
-    def PRN(self):
+    def handle_MUL(self):
+        """
+        MUL registerA register B
+        Multiply the values in two registers together and store the result in registerA.
+        """
+        operand_a = self.ram[self.PC+1] & REG_MASK
+        operand_b = self.ram[self.PC+2] & REG_MASK
+        self.alu("MUL", operand_a, operand_b)
+
+    def handle_PRN(self):
         """
         PRN register (pseudo-instruction)
         Print numeric value stored in the given register.
@@ -175,7 +198,7 @@ class CPU:
                 self.PC += (self.IR >> 6) + 1
             else:
                 # Quit on unknown instruction
-                print(
+                raise Exception(
                     f"Unimplemented instruction {self.IR:02x} at {self.PC:02x}")
                 self.halted = True
 
