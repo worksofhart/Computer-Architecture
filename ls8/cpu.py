@@ -213,12 +213,12 @@ class CPU:
 
                 # Interrupt servicing
                 masked_interrupts = self.reg[IS] & self.reg[IM]
-                if masked_interrupts and interrupts.enabled:
+                if masked_interrupts and interrupts.ENABLED:
                     i = 0
-                    while i <= 7 and interrupts.enabled:
+                    while i <= 7 and interrupts.ENABLED:
                         bit_mask = 1 << i
                         if masked_interrupts & bit_mask:
-                            interrupts.enabled = False
+                            interrupts.ENABLED = False
                             self.reg[IS] ^= bit_mask
                             self.handle_PUSH(self.PC)
                             self.handle_PUSH(self.FL)
@@ -247,7 +247,7 @@ class CPU:
                         f"Unimplemented instruction 0x{self.IR:02x} at 0x{self.PC:02x}")
                     self.halted = True
 
-                if interrupts.done:
+                if interrupts.DONE:
                     self.halted = True
             interrupts.stop()
 
@@ -351,7 +351,7 @@ class CPU:
             self.reg[r] = self.handle_POP()
         self.FL = self.handle_POP()
         self.PC = self.handle_POP()
-        self.interrupts.enabled = True
+        self.interrupts.ENABLED = True
 
     def handle_JEQ(self):
         """

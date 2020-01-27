@@ -20,9 +20,11 @@ class Interrupts():
     - Keyboard is polled update_interval times per second and interrupt is triggered on keypress
     - Timer interrupt updates once per second
     """
-    done = False  # Set to True to kill thread
-    enabled = True  # After being set False, remains set until serviced
-    ticks = 0  # Clock ticks update_interval times per second
+
+    DONE = False  # Set to True to kill thread
+    ENABLED = True  # After being set False, remains set until serviced
+    TICKS = 0  # Clock TICKS update_interval times per second
+
     kb = KBHit()  # Scan for key presses
 
     def __init__(self, regs, update_interval=60):
@@ -32,27 +34,32 @@ class Interrupts():
         self.keypressed = 0b00000000  # Stores current keypress
 
     def interrupts_task(self):
-        while not self.done:
-            # If Esc pressed, exit
+        while not self.DONE:
+            # Read currently pressed key if any. If ESC key is pressed, exit
             self.keypressed = ord(self.kb.getch()) if self.kb.kbhit() else 0
             if self.keypressed and self.keypressed == 27:
-                self.done = True
+                self.DONE = True
                 print()
                 sys.exit()
 
-            if self.regs[IM] and self.enabled:
+            if self.regs[IM] and self.ENABLED:
                 # Keyboard interrupt triggered as many as update_interval times per second
                 if self.keypressed:
                     # If a key is in the buffer, set IS bit
                     self.regs[IS] |= KEYBOARD
                 # Timer interrupt triggered once per second
-                if not self.ticks:
-                    self.regs[IS] |= TIMER  # Set Timer status bit
+                if not self.TICKS:
+                    # Set Timer status bit when TICKS = 0
+                    self.regs[IS] |= TIMER
 
+            # Wait specified time before processing interrupts again
             time.sleep(self.delay)
-            self.ticks = (self.ticks + 1) % self.update_interval
+
+            # Advance time counter. When TICKS == update_interval, reset to 0
+            self.TICKS = (self.TICKS + 1) % self.update_interval
 
     def __enter__(self):
+        # Start interrupts thread
         try:
             threading.Thread(target=self.interrupts_task).start()
         except:  # Handle exceptions
@@ -64,4 +71,4 @@ class Interrupts():
             return False
 
     def stop(self):
-        self.done = True
+        self.DONE = True
