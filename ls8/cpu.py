@@ -164,6 +164,13 @@ class CPU:
             self.reg[reg_a] <<= self.reg[reg_b]
         elif op == "SHR":
             self.reg[reg_a] >>= self.reg[reg_b]
+        elif op == "CMP":
+            if self.reg[reg_a] == self.reg[reg_b]:
+                self.FL = 0b001
+            elif self.reg[reg_a] < self.reg[reg_b]:
+                self.FL = 0b100
+            elif self.reg[reg_a] > self.reg[reg_b]:
+                self.FL = 0b010
         else:
             self.halted = True
             raise Exception("Unsupported ALU operation")
@@ -211,19 +218,27 @@ class CPU:
                 self.ram_write(0xF4, interrupts.keypressed)
                 # input()
 
-                # Interrupt servicing
+                # INTERRUPT SERVICING - select only watched-for interrupts by masking
                 masked_interrupts = self.reg[IS] & self.reg[IM]
+
+                # If watched-for interrupts exist, have been triggered, and are currently enabled
                 if masked_interrupts and interrupts.ENABLED:
+                    # Loop through bits of masked interrupts from low to high
                     i = 0
                     while i <= 7 and interrupts.ENABLED:
                         bit_mask = 1 << i
+                        # If selected bit is set, prepare to service interrupt
                         if masked_interrupts & bit_mask:
+                            # Turn off interrupts
                             interrupts.ENABLED = False
+                            # Clear selected Interrupt Status Bit
                             self.reg[IS] ^= bit_mask
+                            # Push PC, FL, and R0 - R6 to stack
                             self.handle_PUSH(self.PC)
                             self.handle_PUSH(self.FL)
                             for r in range(7):
                                 self.handle_PUSH(self.reg[r])
+                            # Put address from selected interrupt vector in PC
                             self.PC = self.ram_read(0xF8 + i)
                         i += 1
 
@@ -247,6 +262,7 @@ class CPU:
                         f"Unimplemented instruction 0x{self.IR:02x} at 0x{self.PC:02x}")
                     self.halted = True
 
+                # Kill switch from interrupt source, currently triggered by hitting ESC key
                 if interrupts.DONE:
                     self.halted = True
             interrupts.stop()
@@ -289,16 +305,9 @@ class CPU:
         CMP registerA registerB
         Compare the values in two registers and set flags accordingly.
         """
-        operand_a = self.reg[self.ram_read(self.PC+1) & REG_MASK]
-        operand_b = self.reg[self.ram_read(self.PC+2) & REG_MASK]
-
-        self.FL = 0b000
-        if operand_a == operand_b:
-            self.FL |= 0b001
-        elif operand_a < operand_b:
-            self.FL |= 0b100
-        elif operand_a > operand_b:
-            self.FL |= 0b010
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        operand_b = self.ram_read(self.PC+2) & REG_MASK
+        self.alu("CMP", operand_a, operand_b)
 
     def handle_DEC(self):
         """
