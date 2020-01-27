@@ -1,21 +1,7 @@
 """CPU functionality."""
 
 import sys
-import termios
-import tty
-from kbhit import KBHit
-
-
-def getch():
-    fd = sys.stdin.fileno()
-    old_settings = termios.tcgetattr(fd)
-    try:
-        tty.setraw(sys.stdin.fileno())
-        ch = sys.stdin.read(1)
-
-    finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-    return ch
+from interrupts import Interrupts
 
 
 # Register name constants
@@ -90,6 +76,8 @@ class CPU:
         self.FL = 0b00000000
         # Whether halted or not
         self.halted = False
+        # Whether interrupts are currently disabled
+        self.interrupts_disabled = False
 
         # Instruction jump table
         self.jumptable = {
@@ -180,6 +168,9 @@ class CPU:
 
         self.reg[reg_a] &= BYTE_MASK
 
+    def service_interrupts(self):
+        pass
+
     def trace(self):
         """
         Handy function to print out the CPU state. You might want to call this
@@ -199,44 +190,66 @@ class CPU:
             print(" %02X" % self.reg[i], end='')
 
         print(" | %02X |" % self.reg[SP], end="")
-        for i in range(240, 256):
+        for i in range(230, 243):
+            print(" %02X" % self.ram[i], end='')
+
+        print(" | ", end='')
+        for i in range(243, 256):
             print(" %02X" % self.ram[i], end='')
 
         print()
 
     # Execute the currently loaded program
-
     def run(self):
         """Run the CPU."""
 
-        kb = KBHit()
-        # Execute instructions until a HLT instruction or invalid state reached
-        while not self.halted:
-            if kb.kbhit():
-                key = kb.getch()
-                self.ram_write(0xF4, key)
-                print(key, end="", flush=True)
-            # print("Before:")
-            # self.trace()
+        with Interrupts(regs=self.reg) as interrupts:
 
-            # Load the instruction register
-            self.IR = self.ram_read(self.PC)
+            # Execute instructions until a HLT instruction or invalid state reached
+            while not self.halted:
+                # Store most recently pressed key in 0xF4
+                self.ram_write(0xF4, interrupts.keypressed)
 
-            # If a known instruction is found, execute it
-            if self.IR in self.jumptable:
-                self.jumptable[self.IR]()
+                # Interrupt servicing
+                masked_interrupts = self.reg[IS] & self.reg[IM]
+                if masked_interrupts and not interrupts.disabled:
+                    i = 0
+                    while i <= 7 and not interrupts.disabled:
+                        bit_mask = 1 << i
+                        if masked_interrupts & bit_mask:
+                            interrupts.disabled = True
+                            self.reg[IS] ^= bit_mask
+                            self.handle_PUSH(self.PC)
+                            self.handle_PUSH(self.FL)
+                            for r in range(7):
+                                self.handle_PUSH(self.reg[r])
+                            self.PC = self.ram_read(0b11111111 - i)
 
-                # If the instruction doesn't set PC directly, advance to next instruction
-                if not (self.IR & 0b00010000):
-                    self.PC += (self.IR >> 6) + 1
-
-                # print("After:")
+                # print("Before:")
                 # self.trace()
-            else:
-                # Quit on unknown instruction
-                raise Exception(
-                    f"Unimplemented instruction 0x{self.IR:02x} at 0x{self.PC:02x}")
-                self.halted = True
+
+                # Load the instruction register
+                self.IR = self.ram_read(self.PC)
+
+                # If a known instruction is found, execute it
+                if self.IR in self.jumptable:
+                    self.jumptable[self.IR]()
+
+                    # If the instruction doesn't set PC directly, advance to next instruction
+                    if not self.IR & 0b00010000:
+                        self.PC += (self.IR >> 6) + 1
+
+                    # print("After:")
+                    # self.trace()
+                else:
+                    # Quit on unknown instruction
+                    raise Exception(
+                        f"Unimplemented instruction 0x{self.IR:02x} at 0x{self.PC:02x}")
+                    self.halted = True
+
+                if not interrupts.active:
+                    self.halted = True
+            interrupts.stop()
 
     # Instructions
     def handle_ADD(self):
