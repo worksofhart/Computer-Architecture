@@ -63,11 +63,5 @@ class Interrupts():
         if exception is not None:
             return False
 
-    def disable(self):
-        self.enabled = False
-
-    def enable(self):
-        self.enabled = True
-
     def stop(self):
         self.done = True
