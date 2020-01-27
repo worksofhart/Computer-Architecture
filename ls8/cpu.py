@@ -89,6 +89,7 @@ class CPU:
             DIV: self.handle_DIV,
             HLT: self.handle_HLT,
             INC: self.handle_INC,
+            INT: self.handle_INT,
             JEQ: self.handle_JEQ,
             JGE: self.handle_JGE,
             JGT: self.handle_JGT,
@@ -168,9 +169,6 @@ class CPU:
 
         self.reg[reg_a] &= BYTE_MASK
 
-    def service_interrupts(self):
-        pass
-
     def trace(self):
         """
         Handy function to print out the CPU state. You might want to call this
@@ -204,6 +202,7 @@ class CPU:
         """Run the CPU."""
 
         with Interrupts(regs=self.reg) as interrupts:
+            self.interrupts = interrupts
 
             # Execute instructions until a HLT instruction or invalid state reached
             while not self.halted:
@@ -212,18 +211,18 @@ class CPU:
 
                 # Interrupt servicing
                 masked_interrupts = self.reg[IS] & self.reg[IM]
-                if masked_interrupts and not interrupts.disabled:
+                if masked_interrupts and interrupts.enabled:
                     i = 0
-                    while i <= 7 and not interrupts.disabled:
+                    while i <= 7 and interrupts.enabled:
                         bit_mask = 1 << i
                         if masked_interrupts & bit_mask:
-                            interrupts.disabled = True
+                            interrupts.enabled = False
                             self.reg[IS] ^= bit_mask
                             self.handle_PUSH(self.PC)
                             self.handle_PUSH(self.FL)
                             for r in range(7):
                                 self.handle_PUSH(self.reg[r])
-                            self.PC = self.ram_read(0b11111111 - i)
+                            self.PC = self.ram_read(0xF8 + i)
 
                 # print("Before:")
                 # self.trace()
@@ -247,7 +246,7 @@ class CPU:
                         f"Unimplemented instruction 0x{self.IR:02x} at 0x{self.PC:02x}")
                     self.halted = True
 
-                if not interrupts.active:
+                if interrupts.done:
                     self.halted = True
             interrupts.stop()
 
@@ -334,6 +333,25 @@ class CPU:
         self.reg[operand_a] += 1
         self.reg[operand_a] &= BYTE_MASK
 
+    def handle_INT(self):
+        """
+        INT register
+        Issue the interrupt number stored in the given register.
+        """
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        self.reg[IS] |= 1 << operand_a
+
+    def handle_IRET(self):
+        """
+        IRET
+        Return from an interrupt handler.
+        """
+        for r in range(7):
+            self.reg[r] = self.handle_POP()
+        self.FL = handle_POP()
+        self.PC = handle_POP()
+        self.interrupts.enabled = True
+
     def handle_JEQ(self):
         """
         JEQ register
@@ -394,9 +412,9 @@ class CPU:
         JMP register
         Jump to the address stored in the given register.
         """
-        if not addr:
+        if addr is None:
             operand_a = self.ram_read(self.PC+1) & REG_MASK
-        self.PC = self.reg[operand_a] if not addr else addr
+        self.PC = self.reg[operand_a] if addr is None else addr
 
     def handle_JNE(self):
         """
@@ -504,11 +522,11 @@ class CPU:
         Push the value in the given register on the stack.
         If val given in function call, push val instead
         """
-        if not val:
+        if val is None:
             operand_a = self.ram_read(self.PC+1) & REG_MASK
         self.reg[SP] -= 1
         self.reg[SP] &= BYTE_MASK
-        self.ram_write(self.reg[SP], self.reg[operand_a] if not val else val)
+        self.ram_write(self.reg[SP], self.reg[operand_a] if val is None else val)
 
     def handle_RET(self):
         """

@@ -20,28 +20,27 @@ class Interrupts():
     - Keyboard is polled update_interval times per second and interrupt is triggered on keypress
     - Timer interrupt updates once per second
     """
-    active = True  # Set to false to kill thread
-    disabled = False  # After being set True, remains set until serviced
+    done = False  # Set to True to kill thread
+    enabled = True  # After being set False, remains set until serviced
     ticks = 0  # Clock ticks update_interval times per second
     kb = KBHit()  # Scan for key presses
 
     def __init__(self, regs, update_interval=60):
         self.update_interval = update_interval
         self.delay = 1 / update_interval
-        self.timer_enabled = False
         self.regs = regs  # Registers from CPU
         self.keypressed = 0b00000000  # Stores current keypress
 
     def interrupts_task(self):
-        while self.active:
-            if self.regs[IM] and not self.disabled:
+        while not self.done:
+            if self.regs[IM] and self.enabled:
                 # Keyboard interrupt triggered as many as update_interval times per second
                 self.keypressed = self.kb.getch() if self.kb.kbhit() else 0
                 # If a key is in the buffer and it's not Esc
                 if self.keypressed and ord(key) != 27:
                     self.regs[IS] |= KEYBOARD
-                elif ord(self.keypressed) == 27:
-                    self.active = False
+                elif self.keypressed == 27:
+                    self.done = True
                     sys.exit()
                 # Timer interrupt triggered once per second
                 if not self.ticks:
@@ -61,5 +60,11 @@ class Interrupts():
         if exception is not None:
             return False
 
+    def disable(self):
+        self.enabled = False
+
+    def enable(self):
+        self.enabled = True
+
     def stop(self):
-        self.active = False
+        self.done = True
