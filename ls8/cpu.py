@@ -209,6 +209,7 @@ class CPU:
             while not self.halted:
                 # Store most recently pressed key in 0xF4
                 self.ram_write(0xF4, interrupts.keypressed)
+                # input()
 
                 # Interrupt servicing
                 masked_interrupts = self.reg[IS] & self.reg[IM]
@@ -224,9 +225,10 @@ class CPU:
                             for r in range(7):
                                 self.handle_PUSH(self.reg[r])
                             self.PC = self.ram_read(0xF8 + i)
+                        i += 1
 
-                # print("Before:")
                 # self.trace()
+                # print()
 
                 # Load the instruction register
                 self.IR = self.ram_read(self.PC)
@@ -239,9 +241,6 @@ class CPU:
                     if not self.IR & 0b00010000:
                         self.PC += (self.IR >> 6) + 1
 
-                    # print("After:")
-                    # self.trace()
-                    # print()
                 else:
                     # Quit on unknown instruction
                     raise Exception(

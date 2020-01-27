@@ -34,8 +34,8 @@ class Interrupts():
     def interrupts_task(self):
         while not self.done:
             # If Esc pressed, exit
-            self.keypressed = self.kb.getch() if self.kb.kbhit() else 0
-            if self.keypressed and ord(self.keypressed) == 27:
+            self.keypressed = ord(self.kb.getch()) if self.kb.kbhit() else 0
+            if self.keypressed and self.keypressed == 27:
                 self.done = True
                 print()
                 sys.exit()
