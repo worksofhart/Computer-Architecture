@@ -33,15 +33,18 @@ class Interrupts():
 
     def interrupts_task(self):
         while not self.done:
+            # If Esc pressed, exit
+            self.keypressed = self.kb.getch() if self.kb.kbhit() else 0
+            if self.keypressed and ord(self.keypressed) == 27:
+                self.done = True
+                print()
+                sys.exit()
+
             if self.regs[IM] and self.enabled:
                 # Keyboard interrupt triggered as many as update_interval times per second
-                self.keypressed = self.kb.getch() if self.kb.kbhit() else 0
-                # If a key is in the buffer and it's not Esc
-                if self.keypressed and ord(key) != 27:
+                if self.keypressed:
+                    # If a key is in the buffer, set IS bit
                     self.regs[IS] |= KEYBOARD
-                elif self.keypressed == 27:
-                    self.done = True
-                    sys.exit()
                 # Timer interrupt triggered once per second
                 if not self.ticks:
                     self.regs[IS] |= TIMER  # Set Timer status bit

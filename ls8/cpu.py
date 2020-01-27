@@ -90,6 +90,7 @@ class CPU:
             HLT: self.handle_HLT,
             INC: self.handle_INC,
             INT: self.handle_INT,
+            IRET: self.handle_IRET,
             JEQ: self.handle_JEQ,
             JGE: self.handle_JGE,
             JGT: self.handle_JGT,
@@ -240,6 +241,7 @@ class CPU:
 
                     # print("After:")
                     # self.trace()
+                    # print()
                 else:
                     # Quit on unknown instruction
                     raise Exception(
@@ -346,10 +348,10 @@ class CPU:
         IRET
         Return from an interrupt handler.
         """
-        for r in range(7):
+        for r in reversed(range(7)):
             self.reg[r] = self.handle_POP()
-        self.FL = handle_POP()
-        self.PC = handle_POP()
+        self.FL = self.handle_POP()
+        self.PC = self.handle_POP()
         self.interrupts.enabled = True
 
     def handle_JEQ(self):
@@ -506,7 +508,7 @@ class CPU:
         Print alpha character value stored in the given register.
         """
         operand_a = self.ram_read(self.PC+1) & REG_MASK
-        print(chr(self.reg[operand_a]), end='')
+        print(chr(self.reg[operand_a]), end='', flush=True)
 
     def handle_PRN(self):
         """
@@ -526,7 +528,8 @@ class CPU:
             operand_a = self.ram_read(self.PC+1) & REG_MASK
         self.reg[SP] -= 1
         self.reg[SP] &= BYTE_MASK
-        self.ram_write(self.reg[SP], self.reg[operand_a] if val is None else val)
+        self.ram_write(self.reg[SP], self.reg[operand_a]
+                       if val is None else val)
 
     def handle_RET(self):
         """
