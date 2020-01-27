@@ -1,6 +1,5 @@
 """CPU functionality."""
 
-import sys
 from interrupts import Interrupts
 
 
@@ -70,14 +69,12 @@ class CPU:
         # Internal registers
         # Program Counter, address of the currently executing instruction
         self.PC = 0x00
-        # Instruction Register, contains a copy of the currently executing instruction
+        # Instruction Register, contains the currently executing instruction
         self.IR = 0x00
         # Flags, 0b00000LGE (less-than, greater-than, equal)
         self.FL = 0b00000000
         # Whether halted or not
         self.halted = False
-        # Whether interrupts are currently disabled
-        self.interrupts_disabled = False
 
         # Instruction jump table
         self.jumptable = {
@@ -212,16 +209,18 @@ class CPU:
         with Interrupts(regs=self.reg) as interrupts:
             self.interrupts = interrupts
 
-            # Execute instructions until a HLT instruction or invalid state reached
+            # Execute instructions until a HLT instruction or invalid state
             while not self.halted:
                 # Store most recently pressed key in 0xF4
                 self.ram_write(0xF4, interrupts.keypressed)
                 # input()
 
-                # INTERRUPT SERVICING - select only watched-for interrupts by masking
+                # INTERRUPT SERVICING
+                # Select only watched-for interrupts by masking
                 masked_interrupts = self.reg[IS] & self.reg[IM]
 
-                # If watched-for interrupts exist, have been triggered, and are currently enabled
+                # If watched-for interrupts exist, have been triggered,
+                #  and are currently enabled
                 if masked_interrupts and interrupts.ENABLED:
                     # Loop through bits of masked interrupts from low to high
                     i = 0
@@ -252,17 +251,20 @@ class CPU:
                 if self.IR in self.jumptable:
                     self.jumptable[self.IR]()
 
-                    # If the instruction doesn't set PC directly, advance to next instruction
+                    # If the instruction doesn't set PC directly,
+                    #  advance to next instruction
                     if not self.IR & 0b00010000:
                         self.PC += (self.IR >> 6) + 1
 
                 else:
                     # Quit on unknown instruction
                     raise Exception(
-                        f"Unimplemented instruction 0x{self.IR:02x} at 0x{self.PC:02x}")
+                        f"Unimplemented instruction 0x{self.IR:02x}"
+                        f" at 0x{self.PC:02x}")
                     self.halted = True
 
-                # Kill switch from interrupt source, currently triggered by hitting ESC key
+                # Kill switch from interrupt source, currently triggered by
+                #  hitting ESC key
                 if interrupts.DONE:
                     self.halted = True
             interrupts.stop()
@@ -280,7 +282,8 @@ class CPU:
     def handle_AND(self):
         """
         AND registerA registerB
-        Bitwise-AND the values in registerA and registerB, then store the result in registerA.
+        Bitwise-AND the values in registerA and registerB,
+        then store the result in registerA.
         """
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2) & REG_MASK
@@ -321,7 +324,8 @@ class CPU:
     def handle_DIV(self):
         """
         SUB registerA registerB
-        Divide the value in the first register by the value in the second, storing the result in registerA.
+        Divide the value in the first register by the value in the second,
+        storing the result in registerA.
         """
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2) & REG_MASK
@@ -365,7 +369,8 @@ class CPU:
     def handle_JEQ(self):
         """
         JEQ register
-        If equal flag is set (true), jump to the address stored in the given register.
+        If equal flag is set (true), jump to the address stored in
+        the given register.
         """
         if self.FL & 0b001:
             operand_a = self.ram_read(self.PC+1) & REG_MASK
@@ -376,7 +381,8 @@ class CPU:
     def handle_JGE(self):
         """
         JGE register
-        If greater-than flag or equal flag is set (true), jump to the address stored in the given register.
+        If greater-than flag or equal flag is set (true), jump to the address
+        stored in the given register.
         """
         if self.FL & 0b011:
             operand_a = self.ram_read(self.PC+1) & REG_MASK
@@ -387,7 +393,8 @@ class CPU:
     def handle_JGT(self):
         """
         JGT register
-        If greater-than flag is set (true), jump to the address stored in the given register.
+        If greater-than flag is set (true), jump to the address stored in
+        the given register.
         """
         if self.FL & 0b010:
             operand_a = self.ram_read(self.PC+1) & REG_MASK
@@ -398,7 +405,8 @@ class CPU:
     def handle_JLE(self):
         """
         JLE register
-        If less-than flag or equal flag is set (true), jump to the address stored in the given register.
+        If less-than flag or equal flag is set (true), jump to the address
+        stored in the given register.
         """
         if self.FL & 0b101:
             operand_a = self.ram_read(self.PC+1) & REG_MASK
@@ -409,7 +417,8 @@ class CPU:
     def handle_JLT(self):
         """
         JLT register
-        If less-than flag is set (true), jump to the address stored in the given register.
+        If less-than flag is set (true), jump to the address stored in the
+        given register.
         """
         if self.FL & 0b100:
             operand_a = self.ram_read(self.PC+1) & REG_MASK
@@ -429,7 +438,8 @@ class CPU:
     def handle_JNE(self):
         """
         JNE register
-        If E flag is clear (false, 0), jump to the address stored in the given register.
+        If E flag is clear (false, 0), jump to the address stored in the given
+        register.
         """
         if not self.FL & 0b001:
             operand_a = self.ram_read(self.PC+1) & REG_MASK
@@ -440,7 +450,8 @@ class CPU:
     def handle_LD(self):
         """
         LD registerA registerB
-        Loads registerA with the value at the memory address stored in registerB.
+        Loads registerA with the value at the memory address stored in
+        registerB.
         """
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2) & REG_MASK
@@ -458,7 +469,8 @@ class CPU:
     def handle_MOD(self):
         """
         MOD registerA registerB
-        Divide the value in the first register by the value in the second, storing the remainder of the result in registerA.
+        Divide the value in the first register by the value in the second,
+        storing the remainder of the result in registerA.
         """
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2) & REG_MASK
@@ -467,7 +479,8 @@ class CPU:
     def handle_MUL(self):
         """
         MUL registerA registerB
-        Multiply the values in two registers together and store the result in registerA.
+        Multiply the values in two registers together and store the result in
+        registerA.
         """
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2) & REG_MASK
@@ -491,7 +504,8 @@ class CPU:
     def handle_OR(self):
         """
         OR registerA registerB
-        Bitwise-OR the values in registerA and registerB, then store the result in registerA.
+        Bitwise-OR the values in registerA and registerB, then store the result
+        in registerA.
         """
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2) & REG_MASK
@@ -553,7 +567,8 @@ class CPU:
     def handle_SHL(self):
         """
         SHL registerA registerB
-        Shift the value in registerA left by the number of bits specified in registerB, filling the low bits with 0.
+        Shift the value in registerA left by the number of bits specified in
+        registerB, filling the low bits with 0.
         """
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2) & REG_MASK
@@ -562,7 +577,8 @@ class CPU:
     def handle_SHR(self):
         """
         SHR registerA registerB
-        Shift the value in registerA right by the number of bits specified in registerB, filling the high bits with 0.
+        Shift the value in registerA right by the number of bits specified in
+        registerB, filling the high bits with 0.
         """
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2) & REG_MASK
@@ -580,7 +596,8 @@ class CPU:
     def handle_SUB(self):
         """
         SUB registerA registerB
-        Subtract the value in the second register from the first, storing the result in registerA.
+        Subtract the value in the second register from the first, storing the
+        result in registerA.
         """
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2) & REG_MASK
@@ -589,7 +606,8 @@ class CPU:
     def handle_XOR(self):
         """
         XOR registerA registerB
-        Bitwise-XOR the values in registerA and registerB, then store the result in registerA.
+        Bitwise-XOR the values in registerA and registerB, then store the
+        result in registerA.
         """
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2) & REG_MASK

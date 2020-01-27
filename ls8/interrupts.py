@@ -1,9 +1,7 @@
 import threading
-import requests
 import time
 import sys
 from kbhit import KBHit
-from random import uniform
 
 # Register name constants
 IM = 5  # Interrupt Mask, reg R5
@@ -17,7 +15,8 @@ KEYBOARD = 0b00000010
 class Interrupts():
     """
     Set up a thread to manage interrupt sources
-    - Keyboard is polled update_interval times per second and interrupt is triggered on keypress
+    - Keyboard is polled update_interval times per second and interrupt
+        is triggered on keypress
     - Timer interrupt updates once per second
     """
 
@@ -43,7 +42,8 @@ class Interrupts():
                 sys.exit()
 
             if self.regs[IM] and self.ENABLED:
-                # Keyboard interrupt triggered as many as update_interval times per second
+                # Keyboard interrupt triggered as many as update_interval
+                # times per second
                 if self.keypressed:
                     # If a key is in the buffer, set IS bit
                     self.regs[IS] |= KEYBOARD
@@ -60,10 +60,7 @@ class Interrupts():
 
     def __enter__(self):
         # Start interrupts thread
-        try:
-            threading.Thread(target=self.interrupts_task).start()
-        except:  # Handle exceptions
-            raise Exception("Could not initialize interrupts thread")
+        threading.Thread(target=self.interrupts_task).start()
         return self
 
     def __exit__(self, exception, value, tb):

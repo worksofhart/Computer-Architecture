@@ -3,7 +3,7 @@
 """Main."""
 
 import sys
-from cpu import *
+from cpu import CPU
 
 # If no filename given, print usage and exit
 if len(sys.argv) != 2:
