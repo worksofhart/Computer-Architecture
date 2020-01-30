@@ -9,40 +9,40 @@ IS = 6  # Interrupt Status, reg R6
 SP = 7  # Stack Pointer, reg R7
 
 # Instruction lookup
-ADD = 0b10100000
-AND = 0b10101000
-CALL = 0b01010000
-CMP = 0b10100111
-DEC = 0b01100110
-DIV = 0b10100011
-HLT = 0b00000001  # HLT
-INC = 0b01100101
-INT = 0b01010010
-IRET = 0b00010011
-JEQ = 0b01010101
-JGE = 0b01011010
-JGT = 0b01010111
-JLE = 0b01011001
-JLT = 0b01011000
-JMP = 0b01010100
-JNE = 0b01010110
-LD = 0b10000011
-LDI = 0b10000010  # LDI register immediate
-MOD = 0b10100100
-MUL = 0b10100010
-NOP = 0b00000000
-NOT = 0b01101001
-OR = 0b10101010
-POP = 0b01000110
-PRA = 0b01001000
-PRN = 0b01000111
-PUSH = 0b01000101
-RET = 0b00010001
-SHL = 0b10101100
-SHR = 0b10101101
-ST = 0b10000100
-SUB = 0b10100001
-XOR = 0b10101011
+ADD = 0b10100000   # ADD registerA registerB
+AND = 0b10101000   # AND registerA registerB
+CALL = 0b01010000  # CALL register
+CMP = 0b10100111   # CMP registerA registerB
+DEC = 0b01100110   # DEC register
+DIV = 0b10100011   # SUB registerA registerB
+HLT = 0b00000001   # HLT
+INC = 0b01100101   # INC register
+INT = 0b01010010   # IRET
+IRET = 0b00010011  # JEQ register
+JEQ = 0b01010101   # JEQ register
+JGE = 0b01011010   # JGE register
+JGT = 0b01010111   # JGT register
+JLE = 0b01011001   # JLE register
+JLT = 0b01011000   # JLT register
+JMP = 0b01010100   # JMP register
+JNE = 0b01010110   # JNE register
+LD = 0b10000011    # LD registerA registerB
+LDI = 0b10000010   # LDI register immediate
+MOD = 0b10100100   # MOD registerA registerB
+MUL = 0b10100010   # MUL registerA registerB
+NOP = 0b00000000   # NOP
+NOT = 0b01101001   # NOT register
+OR = 0b10101010    # OR registerA registerB
+POP = 0b01000110   # POP register
+PRA = 0b01001000   # PRA register pseudo-instruction
+PRN = 0b01000111   # PRN register (pseudo-instruction)
+PUSH = 0b01000101  # PUSH register
+RET = 0b00010001   # RET
+SHL = 0b10101100   # SHL registerA registerB
+SHR = 0b10101101   # SHR registerA registerB
+ST = 0b10000100    # ST registerA registerB
+SUB = 0b10100001   # SUB registerA registerB
+XOR = 0b10101011   # XOR registerA registerB
 
 # Register mask
 # Isolate register number in instructions which operate on registers
@@ -526,7 +526,7 @@ class CPU:
 
     def handle_PRA(self):
         """
-        PRA register pseudo-instruction
+        PRA register (pseudo-instruction)
         Print alpha character value stored in the given register.
         """
         operand_a = self.ram_read(self.PC+1) & REG_MASK
