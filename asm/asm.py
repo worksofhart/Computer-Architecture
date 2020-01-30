@@ -165,7 +165,7 @@ def pass1(inputfile, sym, code):
 
         nonlocal addr
 
-        code.append(f"{machine_code} # {opcode}")
+        code.append(f"{machine_code} # {addr:02x} | {opcode}")
         addr += 1
 
     def out1(opcode, op_a, op_b, machine_code):
@@ -174,7 +174,7 @@ def pass1(inputfile, sym, code):
         nonlocal addr
 
         reg_a = get_reg(op_a)
-        code.append(f"{machine_code} # {opcode} {op_a}")
+        code.append(f"{machine_code} # {addr:02x} | {opcode} {op_a}")
         code.append(p8(reg_a))
         addr += 2
 
@@ -186,7 +186,7 @@ def pass1(inputfile, sym, code):
         reg_a = get_reg(op_a)
         reg_b = get_reg(op_b)
 
-        code.append(f"{machine_code} # {opcode} {op_a},{op_b}")
+        code.append(f"{machine_code} # {addr:02x} | {opcode} {op_a},{op_b}")
         code.append(p8(reg_a))
         code.append(p8(reg_b))
 
@@ -207,7 +207,7 @@ def pass1(inputfile, sym, code):
             # If it's not a value, it might be a symbol
             out_b = f"sym:{op_b}"
 
-        code.append(f"{machine_code} # {opcode} {op_a},{op_b}")
+        code.append(f"{machine_code} # {addr:02x} | {opcode} {op_a},{op_b}")
         code.append(p8(reg_a))
         code.append(out_b)
 
@@ -341,7 +341,7 @@ def pass1(inputfile, sym, code):
             if label is not None:
                 sym[label] = addr
                 # print(f"Label {label}: {addr}")  # debug
-                code.append(f'# {label} (address {addr}):')
+                code.append(f'# {label} (address 0x{addr:02x}):')
 
             if opcode is not None:
                 if opcode == 'DS':
