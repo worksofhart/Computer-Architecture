@@ -128,7 +128,7 @@ class CPU:
             self.ram[address] = instruction
             address += 1
 
-    def alu(self, op, reg_a, reg_b=0):
+    def alu(self, op, reg_a, reg_b):
         """ALU operations."""
 
         if op == "ADD":

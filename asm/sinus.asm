@@ -119,9 +119,6 @@ SineTable:
 
 ; Start of printable data
 
-SpcCharacter:
-    db 0x09
-
 Hello:
 	ds Hello, world!
 	db 0x0a              ; newline
