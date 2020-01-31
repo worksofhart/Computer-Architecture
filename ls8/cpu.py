@@ -10,6 +10,7 @@ SP = 7  # Stack Pointer, reg R7
 
 # Instruction lookup
 ADD = 0b10100000   # ADD registerA registerB
+ADDI = 0b10101111   # ADDI registerA immediate
 AND = 0b10101000   # AND registerA registerB
 CALL = 0b01010000  # CALL register
 CMP = 0b10100111   # CMP registerA registerB
@@ -79,6 +80,7 @@ class CPU:
         # Instruction jump table
         self.jumptable = {
             ADD: self.handle_ADD,
+            ADDI: self.handle_ADDI,
             AND: self.handle_AND,
             CALL: self.handle_CALL,
             CMP: self.handle_CMP,
@@ -128,51 +130,53 @@ class CPU:
             self.ram[address] = instruction
             address += 1
 
-    def alu(self, op, reg_a, reg_b):
+    def alu(self, op, op_a, op_b):
         """ALU operations."""
 
         if op == "ADD":
-            self.reg[reg_a] += self.reg[reg_b]
+            self.reg[op_a] += self.reg[op_b]
+        elif op == "ADDI":
+            self.reg[op_a] += op_b
         elif op == "SUB":
-            self.reg[reg_a] -= self.reg[reg_b]
+            self.reg[op_a] -= self.reg[op_b]
         elif op == "MUL":
-            self.reg[reg_a] *= self.reg[reg_b]
+            self.reg[op_a] *= self.reg[op_b]
         elif op == "DIV":
-            if self.reg[reg_b] != 0:
-                self.reg[reg_a] //= self.reg[reg_b]
+            if self.reg[op_b] != 0:
+                self.reg[op_a] //= self.reg[op_b]
             else:
                 self.halted = True
                 raise Exception("Division by zero error")
         elif op == "MOD":
-            if self.reg[reg_b] != 0:
-                self.reg[reg_a] %= self.reg[reg_b]
+            if self.reg[op_b] != 0:
+                self.reg[op_a] %= self.reg[op_b]
             else:
                 self.halted = True
                 raise Exception("Division by zero error")
         elif op == "AND":
-            self.reg[reg_a] &= self.reg[reg_b]
+            self.reg[op_a] &= self.reg[op_b]
         elif op == "OR":
-            self.reg[reg_a] |= self.reg[reg_b]
+            self.reg[op_a] |= self.reg[op_b]
         elif op == "NOT":
-            self.reg[reg_a] = ~self.reg[reg_a]
+            self.reg[op_a] = ~self.reg[op_a]
         elif op == "XOR":
-            self.reg[reg_a] ^= self.reg[reg_b]
+            self.reg[op_a] ^= self.reg[op_b]
         elif op == "SHL":
-            self.reg[reg_a] <<= self.reg[reg_b]
+            self.reg[op_a] <<= self.reg[op_b]
         elif op == "SHR":
-            self.reg[reg_a] >>= self.reg[reg_b]
+            self.reg[op_a] >>= self.reg[op_b]
         elif op == "CMP":
-            if self.reg[reg_a] == self.reg[reg_b]:
+            if self.reg[op_a] == self.reg[op_b]:
                 self.FL = 0b001
-            elif self.reg[reg_a] < self.reg[reg_b]:
+            elif self.reg[op_a] < self.reg[op_b]:
                 self.FL = 0b100
-            elif self.reg[reg_a] > self.reg[reg_b]:
+            elif self.reg[op_a] > self.reg[op_b]:
                 self.FL = 0b010
         else:
             self.halted = True
             raise Exception("Unsupported ALU operation")
 
-        self.reg[reg_a] &= BYTE_MASK
+        self.reg[op_a] &= BYTE_MASK
 
     def trace(self):
         """
@@ -242,7 +246,6 @@ class CPU:
                         i += 1
 
                 # self.trace()
-                # print()
 
                 # Load the instruction register
                 self.IR = self.ram_read(self.PC)
@@ -253,6 +256,7 @@ class CPU:
 
                     # If the instruction doesn't set PC directly,
                     #  advance to next instruction
+
                     if not self.IR & 0b00010000:
                         self.PC += (self.IR >> 6) + 1
 
@@ -278,6 +282,15 @@ class CPU:
         operand_a = self.ram_read(self.PC+1) & REG_MASK
         operand_b = self.ram_read(self.PC+2) & REG_MASK
         self.alu("ADD", operand_a, operand_b)
+
+    def handle_ADDI(self):
+        """
+        ADDI registerA immediate
+        Add the value in registerA with an integer.
+        """
+        operand_a = self.ram_read(self.PC+1) & REG_MASK
+        operand_b = self.ram_read(self.PC+2)
+        self.alu("ADDI", operand_a, operand_b)
 
     def handle_AND(self):
         """
